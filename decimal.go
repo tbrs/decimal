@@ -25,6 +25,8 @@ import (
 	"math/big"
 	"strconv"
 	"strings"
+
+	"gopkg.in/mgo.v2/bson"
 )
 
 // DivisionPrecision is the number of decimal places in the result when it
@@ -977,4 +979,22 @@ func (d NullDecimal) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 	return d.Decimal.MarshalJSON()
+}
+
+// GetBSON implements the bson.Getter interface.
+func (self Decimal) GetBSON() (interface{}, error) {
+	return self.MarshalBinary()
+}
+
+// SetBSON implements the bson.Setter interface.
+func (self *Decimal) SetBSON(raw bson.Raw) error {
+	var decoded []byte
+	if err := raw.Unmarshal(&decoded); err != nil {
+		return err
+	}
+	// There should be enough bytes to at least decode the exponent.
+	if len(decoded) < 4 {
+		return fmt.Errorf("not a decimal")
+	}
+	return self.UnmarshalBinary(decoded)
 }

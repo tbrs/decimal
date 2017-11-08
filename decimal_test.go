@@ -12,6 +12,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"gopkg.in/mgo.v2/bson"
 )
 
 var testTable = map[float64]string{
@@ -2006,5 +2008,29 @@ func TestAvg(t *testing.T) {
 	avg := Avg(vals[0], vals[1:]...)
 	if !avg.Equal(NewFromFloat(4.5)) {
 		t.Errorf("Failed to calculate average, expected %s got %s", NewFromFloat(4.5).String(), avg.String())
+	}
+}
+
+func TestBson(t *testing.T) {
+	sampleValue, _ := NewFromString("123.45")
+
+	bsonValue, err := sampleValue.GetBSON()
+	if err != nil {
+		t.Errorf("Failed to marshal %s to BSON value: %v", sampleValue, err)
+	}
+	bsonDocument, err := bson.Marshal(bsonValue)
+	if err != nil {
+		t.Errorf("Failed to marshal %s to BSON document: %v", sampleValue, err)
+	}
+	restoredValue := Zero
+	err = restoredValue.SetBSON(bson.Raw{
+		Kind: byte(0x04), // array
+		Data: bsonDocument,
+	})
+	if err != nil {
+		t.Errorf("Failed to unmarshal BSON: %v", err)
+	}
+	if restoredValue.Cmp(sampleValue) != 0 {
+		t.Errorf("BSON'ed %s, restored %s", sampleValue, restoredValue)
 	}
 }
